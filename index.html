@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>终端网络 // 原型枢纽 V7 - 全栖解析版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-white: #ffffff;      
+            --color-yellow: #fffa00;     
+            --color-black: #000000;      
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif; background-color: var(--color-white); color: var(--color-black);
+            overflow: hidden; position: relative;
+        }
+
+        /* 背景层 */
+        body::before {
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px; z-index: -3;
+        }
+        .topo-bg {
+            position: absolute; inset: 0; z-index: -2; opacity: 0.03; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.005' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+            mix-blend-mode: multiply;
+        }
+        .bottom-gradient {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 50vh;
+            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 15%, rgba(0,0,0,0) 100%); z-index: 0; pointer-events: none;
+        }
+        .bottom-gradient::after {
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 100% 4px;
+        }
+        .bg-watermark {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 25vw; font-weight: 900; color: transparent; -webkit-text-stroke: 2px rgba(0, 0, 0, 0.03); white-space: nowrap; z-index: -1; pointer-events: none; letter-spacing: 0.1em;
+        }
+
+        /* 排版与线框组件 */
+        .font-tech { font-family: 'Noto Sans SC', sans-serif; letter-spacing: 1px; }
+        .multi-level-text { position: relative; display: inline-block; z-index: 1; }
+        .multi-level-text .layer-bg { position: absolute; font-size: 2.8em; font-weight: 900; color: transparent; -webkit-text-stroke: 1px rgba(0,0,0,0.1); top: -0.6em; left: -0.1em; pointer-events: none; white-space: nowrap; z-index: -1; }
+        .multi-level-text .layer-sub { font-size: 0.6em; font-weight: 900; display: block; margin-bottom: -0.3em; letter-spacing: 4px; }
+        .multi-level-text .layer-main { font-size: 1.4em; font-weight: 900; letter-spacing: 2px; }
+        .coord-deco { font-size: 0.7rem; font-weight: 900; background: var(--color-black); color: var(--color-yellow); padding: 2px 8px; display: inline-block; letter-spacing: 1px; border: 1px solid var(--color-black); }
+        .module-box { position: relative; background: rgba(255, 255, 255, 0.95); border: 2px solid var(--color-black); }
+        .module-box::before, .module-box::after { content: ''; position: absolute; width: 8px; height: 8px; border: 2px solid var(--color-black); }
+        .module-box::before { top: -4px; left: -4px; background: var(--color-white); }
+        .module-box::after { bottom: -4px; right: -4px; background: var(--color-yellow); }
+        .mech-btn { background: var(--color-white); border: 2px solid var(--color-black); color: var(--color-black); font-weight: 900; cursor: pointer; transition: all 0.2s; position: relative; letter-spacing: 1px; }
+        .mech-btn:hover { background: var(--color-yellow); box-shadow: 4px 4px 0px var(--color-black); transform: translate(-2px, -2px); }
+        .chat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; align-items: start; }
+        .response-card { background: var(--color-white); border: 2px solid var(--color-black); padding: 1rem; box-shadow: 4px 4px 0px var(--color-black); position: relative; }
+        .response-card::before { content: '+'; position: absolute; top: 2px; left: 4px; font-weight: 900; font-size: 12px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-left: 1px solid var(--color-black); }
+        ::-webkit-scrollbar-thumb { background: var(--color-black); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-yellow); }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <div class="topo-bg"></div><div class="bg-watermark">终末地终端</div><div class="bottom-gradient"></div>
+
+    <header class="h-24 flex items-center justify-between px-6 relative z-20 border-b-4 border-black bg-white/95 backdrop-blur-md shrink-0">
+        <div class="flex items-center gap-6 h-full">
+            <div class="h-full w-12 bg-[var(--color-yellow)] border-r-4 border-black flex items-center justify-center font-black text-xl py-2" style="writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 6px;">枢纽</div>
+            <div class="multi-level-text pt-2">
+                <span class="layer-bg">全栖文件解析矩阵</span>
+                <span class="layer-sub">分布式协同演算处理终端</span>
+                <span class="layer-main">原型枢纽控制台 <span class="text-lg">V7</span></span>
+            </div>
+        </div>
+        <div class="flex-1 flex justify-center opacity-80 pointer-events-none hidden md:flex">
+            <div class="flex items-center gap-6 font-tech text-xs font-black">
+                <div class="flex flex-col text-right"><span>北纬: 45.992</span><span>东经: 11.230</span></div>
+                <div class="w-12 h-12 border-2 border-black grid grid-cols-3 grid-rows-3 gap-[2px] bg-black p-[2px]">
+                    <div class="bg-white"></div><div class="bg-[var(--color-yellow)]"></div><div class="bg-white"></div>
+                    <div class="bg-white"></div><div class="bg-white"></div><div class="bg-[var(--color-yellow)]"></div>
+                    <div class="bg-[var(--color-yellow)]"></div><div class="bg-white"></div><div class="bg-white"></div>
+                </div>
+                <div class="flex flex-col"><span>扇区: 泽塔-09</span><span>节点: 满载运行</span></div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="coord-deco animate-pulse">状态：全域链接正常</div>
+            <button onclick="toggleConfig()" class="mech-btn px-6 py-3 font-tech text-sm flex items-center gap-2">
+                <span class="w-2 h-2 bg-black border border-white"></span> [ 覆写全局参数 ]
+            </button>
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-1 overflow-hidden p-6 grid grid-cols-12 gap-6 min-h-0">
+        
+        <aside class="col-span-12 md:col-span-3 flex flex-col gap-6 relative z-10 h-full min-h-0">
+            <div class="module-box p-5 flex flex-col gap-4 shrink-0">
+                <div class="flex justify-between items-end border-b-4 border-black pb-2">
+                    <div class="multi-level-text">
+                        <span class="layer-sub">硬件资源监控</span>
+                        <span class="layer-main text-lg">系统诊断</span>
+                    </div>
+                    <span class="font-tech text-xs bg-[var(--color-yellow)] border-2 border-black px-2 py-0.5 font-black">监察_01</span>
+                </div>
+                <div class="font-tech text-sm font-black flex flex-col gap-2">
+                    <div class="flex justify-between"><span>并发线程池:</span> <span class="text-green-600">已就绪</span></div>
+                    <div class="flex justify-between"><span>文件解析器:</span> <span class="text-blue-600">在线</span></div>
+                    <div class="w-full h-3 bg-gray-200 border-2 border-black mt-2"><div class="w-4/5 h-full bg-black"></div></div>
+                </div>
+            </div>
+
+            <div class="module-box flex-1 p-5 flex flex-col min-h-0">
+                <div class="flex justify-between items-end border-b-4 border-black pb-2 mb-4 shrink-0">
+                    <div class="multi-level-text">
+                        <span class="layer-sub">计算集群调度</span>
+                        <span class="layer-main text-lg">挂载演算节点</span>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 overflow-y-auto pr-2" id="model-list"></div>
+            </div>
+        </aside>
+
+        <section class="col-span-12 md:col-span-9 flex flex-col relative z-10 h-full min-h-0">
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scroll-smooth" id="chat-box">
+                <div class="response-card self-start max-w-3xl module-box !bg-[var(--color-yellow)] shrink-0">
+                    <div class="border-b-2 border-black pb-2 mb-3 flex justify-between items-center">
+                        <span class="font-tech text-sm font-black text-black">全频段广播 // </span>
+                        <span class="coord-deco !bg-white !text-black border-black">模块升级完毕</span>
+                    </div>
+                    <div class="font-tech text-sm font-black leading-relaxed">
+                        已成功接驳 <span class="bg-black text-[var(--color-yellow)] px-2 py-0.5 border-2 border-black">全栖文件解析模块</span>。
+                        <br>现在您不仅可以挂载光学影像（图片），还可以上传 <strong class="text-base mx-1 border-b-4 border-black">纯文本、数据表格(CSV)、代码文件(.py/.js等)</strong>。系统将在本地解包数据并分发至各并发节点进行同步演算。
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-5 module-box !bg-white shadow-[10px_10px_0px_rgba(0,0,0,1)] relative z-20 flex flex-col gap-4 shrink-0">
+                <div class="absolute -top-4 left-6 bg-black text-[var(--color-yellow)] font-tech text-xs font-black px-3 py-1 border-2 border-black">数据输入端口</div>
+                
+                <div id="file-preview-container" class="hidden bg-[var(--color-yellow)] border-4 border-black p-3 flex items-center gap-4">
+                    <div id="file-preview-icon" class="h-20 w-20 flex-shrink-0"></div>
+                    <div class="flex flex-col gap-1 w-full overflow-hidden">
+                        <span id="file-preview-name" class="font-tech text-sm font-black border-b-2 border-black pb-1 truncate">数据已挂载</span>
+                        <button type="button" onclick="clearFile()" class="text-left text-xs font-black hover:bg-black hover:text-[var(--color-yellow)] px-2 py-1 border-2 border-transparent hover:border-black transition-colors w-fit mt-1">[ 卸载数据流 ]</button>
+                    </div>
+                </div>
+
+                <form id="chat-form" class="flex gap-4 items-stretch">
+                    <button type="button" onclick="document.getElementById('file-input').click()" class="mech-btn px-6 flex items-center justify-center border-4" title="挂载影像或数据文档">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    </button>
+                    <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
+
+                    <div class="flex-1 bg-gray-50 border-4 border-black flex items-center px-4 focus-within:bg-[var(--color-yellow)] transition-colors">
+                        <span class="font-tech font-black text-black mr-3 text-xl">></span>
+                        <input type="text" id="user-input" autocomplete="off" placeholder="输入全网广播指令..." class="w-full bg-transparent border-none outline-none font-black text-sm py-4 placeholder-gray-500">
+                    </div>
+                    
+                    <button type="submit" class="mech-btn !bg-black !text-[var(--color-yellow)] px-10 font-tech font-black text-lg flex items-center gap-3 border-4 border-black hover:!bg-[var(--color-yellow)] hover:!text-black">
+                        并发执行
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="square" stroke-linejoin="miter" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <div id="config-modal" class="hidden fixed inset-0 bg-white/70 backdrop-blur-md z-50 flex items-center justify-center">
+        <div class="w-[700px] module-box p-10 shadow-[20px_20px_0px_#000] transform scale-95 transition-transform duration-200 border-4" id="config-panel">
+            <div class="flex justify-between items-start border-b-4 border-black pb-6 mb-8">
+                <div class="multi-level-text">
+                    <span class="layer-sub">接口变量控制中心</span>
+                    <span class="layer-main text-3xl">全局参数覆写</span>
+                </div>
+                <button onclick="toggleConfig()" class="mech-btn px-4 py-2 text-sm mt-2 border-2">[ 放 弃 ]</button>
+            </div>
+            <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-2">
+                    <label class="font-tech text-sm font-black">中继网关地址 (接口 URL)</label>
+                    <input type="text" id="cfg-url" placeholder="示例: https://api.deepseek.com/v1/chat/completions" class="w-full border-4 border-black p-3 font-mono text-sm bg-gray-50 focus:bg-[var(--color-yellow)] outline-none">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="font-tech text-sm font-black">授权访问凭证 (密钥 Key)</label>
+                    <input type="password" id="cfg-key" placeholder="sk-..." class="w-full border-4 border-black p-3 font-mono text-sm bg-gray-50 focus:bg-[var(--color-yellow)] outline-none">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="font-tech text-sm font-black bg-[var(--color-yellow)] w-fit px-2 border-2 border-black">并发引擎集合 (模型名称)</label>
+                    <input type="text" id="cfg-model" placeholder="gpt-4o, qwen-max, deepseek-chat" class="w-full border-4 border-black p-3 font-mono text-sm bg-[var(--color-yellow)] outline-none placeholder-gray-600">
+                </div>
+            </div>
+            <button onclick="saveConfig()" class="mt-8 w-full mech-btn bg-black text-[var(--color-yellow)] hover:bg-[var(--color-yellow)] hover:text-black py-5 font-black text-xl tracking-widest border-4 border-black shadow-[6px_6px_0px_#000]">
+                装载并初始化集群矩阵
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // === 配置管理 ===
+        let sysConfig = { url: '', key: '', modelsStr: '' };
+        let modelArray = [];
+        let stagedFile = null; // 统管所有文件类型
+        
+        try {
+            sysConfig.url = localStorage.getItem('sys_api_url') || '';
+            sysConfig.key = localStorage.getItem('sys_api_key') || '';
+            sysConfig.modelsStr = localStorage.getItem('sys_models_str') || '';
+            parseModels(sysConfig.modelsStr);
+        } catch (e) {}
+
+        function parseModels(str) {
+            if(!str) { modelArray = []; return; }
+            modelArray = str.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        }
+
+        const configModal = document.getElementById('config-modal');
+        const configPanel = document.getElementById('config-panel');
+
+        window.toggleConfig = function() {
+            if (configModal.classList.contains('hidden')) {
+                document.getElementById('cfg-url').value = sysConfig.url;
+                document.getElementById('cfg-key').value = sysConfig.key;
+                document.getElementById('cfg-model').value = sysConfig.modelsStr;
+                configModal.classList.remove('hidden');
+                setTimeout(() => configPanel.classList.remove('scale-95'), 10); 
+            } else {
+                configPanel.classList.add('scale-95');
+                setTimeout(() => configModal.classList.add('hidden'), 200);
+            }
+        };
+
+        window.saveConfig = function() {
+            sysConfig.url = document.getElementById('cfg-url').value.trim();
+            sysConfig.key = document.getElementById('cfg-key').value.trim();
+            sysConfig.modelsStr = document.getElementById('cfg-model').value.trim();
+            parseModels(sysConfig.modelsStr);
+            try {
+                localStorage.setItem('sys_api_url', sysConfig.url);
+                localStorage.setItem('sys_api_key', sysConfig.key);
+                localStorage.setItem('sys_models_str', sysConfig.modelsStr);
+            } catch (e) {}
+            renderModelCheckboxes();
+            toggleConfig();
+        };
+
+        function renderModelCheckboxes() {
+            const listEl = document.getElementById('model-list');
+            if (modelArray.length === 0) {
+                listEl.innerHTML = `<div class="p-4 border-4 border-black bg-white font-black text-sm text-center">集群离线：请覆写参数</div>`;
+                return;
+            }
+            let html = '';
+            modelArray.forEach((model, index) => {
+                const isChecked = index < 3 ? 'checked' : ''; 
+                html += `
+                    <label class="cursor-pointer border-4 border-black bg-white p-4 flex items-center justify-between hover:bg-[var(--color-yellow)] transition-colors shrink-0">
+                        <div class="flex flex-col">
+                            <span class="font-tech font-black text-sm">${model}</span>
+                            <span class="text-xs font-black text-gray-500 mt-1">节点_${String(index+1).padStart(2, '0')}</span>
+                        </div>
+                        <input type="checkbox" value="${model}" class="model-cb w-6 h-6 accent-black border-4 border-black" ${isChecked}>
+                    </label>
+                `;
+            });
+            listEl.innerHTML = html;
+        }
+        renderModelCheckboxes();
+
+        // === 核心逻辑：全栖文件解析 ===
+        window.handleFileSelect = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const isImage = file.type.startsWith('image/');
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const iconContainer = document.getElementById('file-preview-icon');
+                if (isImage) {
+                    stagedFile = { type: 'image', data: e.target.result, name: file.name };
+                    iconContainer.innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover border-2 border-black bg-white">`;
+                    document.getElementById('file-preview-name').innerText = `[光学影像] ${file.name}`;
+                } else {
+                    // 限制文本解析大小（防止纯前端卡死，设定为 2MB）
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert("前端引擎保护协议：为防止内存溢出，纯文本解析仅支持 2MB 以下的文件。更庞大的数据请借助后端或 PDF 专用解析模块。");
+                        return;
+                    }
+                    stagedFile = { type: 'text', data: e.target.result, name: file.name };
+                    iconContainer.innerHTML = `
+                        <div class="h-full w-full border-2 border-black bg-white flex flex-col items-center justify-center text-center p-1">
+                            <span class="font-black text-2xl uppercase">DOC</span>
+                        </div>
+                    `;
+                    document.getElementById('file-preview-name').innerText = `[数据文档] ${file.name}`;
+                }
+                document.getElementById('file-preview-container').classList.remove('hidden');
+            };
+
+            if (isImage) {
+                reader.readAsDataURL(file); // 图片转 Base64 发给 Vision 模型
+            } else {
+                reader.readAsText(file); // 其他文件作为纯文本读取内容
+            }
+        };
+
+        window.clearFile = function() {
+            stagedFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-preview-container').classList.add('hidden');
+        };
+
+        // === 并发演算系统 ===
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+
+        function appendUserMessage(text, fileObj) {
+            const div = document.createElement('div');
+            div.className = `response-card self-end max-w-2xl text-right !bg-black !text-white border-4 shrink-0`;
+            
+            let htmlContent = `
+                <div class="border-b-2 border-gray-600 pb-2 mb-3 flex justify-between items-center flex-row-reverse">
+                    <span class="font-tech text-sm font-black text-[var(--color-yellow)]">操作员指令下发 //</span>
+                </div>
+            `;
+            
+            if (fileObj) {
+                if (fileObj.type === 'image') {
+                    htmlContent += `<img src="${fileObj.data}" class="mb-4 max-w-[250px] border-4 border-[var(--color-yellow)] inline-block"><br>`;
+                } else if (fileObj.type === 'text') {
+                    htmlContent += `<div class="bg-gray-800 border-l-4 border-[var(--color-yellow)] p-2 mb-3 text-left">
+                                        <span class="text-[var(--color-yellow)] font-bold text-xs">📎 已挂载数据文档:</span>
+                                        <div class="text-xs truncate text-gray-300">${fileObj.name}</div>
+                                    </div>`;
+                }
+            }
+            htmlContent += `<div class="font-black text-sm whitespace-pre-wrap break-words">${text}</div>`;
+            
+            div.innerHTML = htmlContent;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function createConcurrentGrid() {
+            const grid = document.createElement('div');
+            grid.className = 'chat-grid w-full mb-8 shrink-0';
+            chatBox.appendChild(grid);
+            return grid;
+        }
+
+        function createLoadingCard(gridContainer, modelName) {
+            const card = document.createElement('div');
+            card.className = 'response-card flex flex-col gap-4 border-4';
+            card.innerHTML = `
+                <div class="border-b-4 border-black pb-2 flex justify-between items-center bg-[var(--color-yellow)] px-3 -mx-4 -mt-4 pt-4">
+                    <span class="font-tech text-sm font-black tracking-widest">${modelName}</span>
+                    <span class="coord-deco animate-pulse border-white">演算中...</span>
+                </div>
+                <div class="flex items-center gap-3 mt-4 opacity-60">
+                    <div class="w-5 h-5 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span class="font-tech text-sm font-black">结构化数据解析中...</span>
+                </div>
+            `;
+            gridContainer.appendChild(card);
+            return card;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text && !stagedFile) return;
+
+            const checkedBoxes = document.querySelectorAll('.model-cb:checked');
+            if (checkedBoxes.length === 0) {
+                alert("未挂载任何演算节点！请于左侧控制台勾选。");
+                if (!sysConfig.url) toggleConfig();
+                return;
+            }
+            
+            const selectedModels = Array.from(checkedBoxes).map(cb => cb.value);
+
+            appendUserMessage(text, stagedFile);
+            const currentFileToSend = stagedFile;
+            userInput.value = '';
+            clearFile();
+
+            const gridContainer = createConcurrentGrid();
+
+            // 动态构建发送给 API 的消息载荷
+            let messageContent;
+            
+            if (!currentFileToSend) {
+                // 纯文本
+                messageContent = text; 
+            } else if (currentFileToSend.type === 'image') {
+                // 图文混合 (Vision 格式)
+                messageContent = [
+                    { type: "text", text: text || "请执行精密光学扫描，并报告该图像的数据特征。" },
+                    { type: "image_url", image_url: { url: currentFileToSend.data } }
+                ];
+            } else if (currentFileToSend.type === 'text') {
+                // 将文本文件的内容硬编码注入到 Prompt 中
+                messageContent = `【核心附加数据区 - 文件名: ${currentFileToSend.name}】\n\`\`\`\n${currentFileToSend.data}\n\`\`\`\n\n【操作员指令】\n${text || "请总结并提取上方核心附加数据区的主要信息。"}`;
+            }
+
+            selectedModels.forEach(model => {
+                const cardUI = createLoadingCard(gridContainer, model);
+
+                fetch(sysConfig.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sysConfig.key}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: "system", content: "你是一个名为『终端网格』的工业分析节点，输出要求：极端理性、逻辑严密、只使用简体中文排版。" },
+                            { role: "user", content: messageContent }
+                        ]
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    cardUI.innerHTML = `
+                        <div class="border-b-4 border-black pb-2 flex justify-between items-center">
+                            <span class="font-tech text-sm font-black tracking-widest pl-4">${model}</span>
+                            <span class="coord-deco bg-black text-[var(--color-yellow)]">演算完成</span>
+                        </div>
+                        <div class="font-bold text-sm leading-relaxed whitespace-pre-wrap break-words mt-3">${data.choices[0].message.content}</div>
+                    `;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                })
+                .catch(error => {
+                    console.error(error);
+                    cardUI.classList.add('!bg-gray-100');
+                    cardUI.innerHTML = `
+                        <div class="border-b-4 border-black pb-2 flex justify-between items-center text-black">
+                            <span class="font-tech text-sm font-black tracking-widest pl-4">${model}</span>
+                            <span class="coord-deco !bg-white !text-black">链路断开</span>
+                        </div>
+                        <div class="font-black text-sm text-black mt-3 bg-[var(--color-yellow)] p-2 border-2 border-black">严重故障：链路解析异常。可能由于节点算力超载或不支持当前数据格式引发。</div>
+                    `;
+                });
+            });
+            
+            setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 50);
+        });
+    </script>
+</body>
+</html>
